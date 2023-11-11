@@ -93,9 +93,6 @@ void app_main(void)
 #if CONFIG_BLUE_PIN
     s_blue_pin = CONFIG_BLUE_PIN;
 #endif
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    esp_ota_img_states_t ota_state = {0};
-    esp_ota_get_state_partition(running, &ota_state);
     nvs_flash_init();
     esp_netif_init();
     esp_event_loop_create_default();
@@ -108,15 +105,10 @@ void app_main(void)
     esp_wifi_start();
     zh_espnow_init_config_t zh_espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
     zh_espnow_init(&zh_espnow_init_config);
-    esp_event_handler_instance_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &s_zh_espnow_event_handler, NULL, NULL);
+    esp_event_handler_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &s_zh_espnow_event_handler, NULL);
     esp_timer_create_args_t gateway_availability_check_timer_args = {
         .callback = (void *)s_zh_set_gateway_offline_status};
     esp_timer_create(&gateway_availability_check_timer_args, &s_gateway_availability_check_timer);
-    if (ota_state == ESP_OTA_IMG_PENDING_VERIFY)
-    {
-        vTaskDelay(60000 / portTICK_PERIOD_MS);
-        esp_ota_mark_app_valid_cancel_rollback();
-    }
 }
 
 static void s_zh_load_config(void)
@@ -193,8 +185,7 @@ static void s_zh_gpio_init(void)
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .timer_num = LEDC_TIMER_0,
         .duty_resolution = LEDC_TIMER_8_BIT,
-        .freq_hz = 100,
-        .clk_cfg = LEDC_AUTO_CLK};
+        .freq_hz = 100};
     ledc_timer_config(&timer_config);
     ledc_channel_config_t channel_config = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -349,11 +340,11 @@ static int32_t s_zh_map(int32_t value, int32_t in_min, int32_t in_max, int32_t o
 
 static void s_zh_send_led_attributes_message_task(void *pvParameter)
 {
-    const esp_app_desc_t *app_info = esp_app_get_description();
+    const esp_app_desc_t *app_info = esp_ota_get_app_description();
     zh_attributes_message_t attributes_message = {0};
     attributes_message.chip_type = HACHT_ESP32;
     strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
-    attributes_message.cpu_frequency = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+    attributes_message.cpu_frequency = CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ;
     attributes_message.reset_reason = (uint8_t)esp_reset_reason();
     strcpy(attributes_message.app_name, app_info->project_name);
     strcpy(attributes_message.app_version, app_info->version);
@@ -456,7 +447,7 @@ static void s_zh_send_led_status_message(void)
 
 static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    const esp_app_desc_t *app_info = esp_app_get_description();
+    const esp_app_desc_t *app_info = esp_ota_get_app_description();
     zh_espnow_data_t data_in = {0};
     zh_espnow_data_t data_out = {0};
     zh_espnow_ota_message_t espnow_ota_message = {0};
