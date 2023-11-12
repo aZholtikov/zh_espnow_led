@@ -28,7 +28,7 @@ static uint8_t s_blue_pin = NOT_USED;
 
 static uint8_t s_led_status = OFF;
 static uint8_t s_brightness_status = 0;
-static uint16_t s_temperature_status = 0;
+static uint16_t s_temperature_status = 255;
 static uint8_t s_red_status = 0;
 static uint8_t s_green_status = 0;
 static uint8_t s_blue_status = 0;
@@ -181,18 +181,10 @@ static void s_zh_save_status(void)
 
 static void s_zh_gpio_init(void)
 {
-    ledc_timer_config_t timer_config = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = LEDC_TIMER_0,
-        .duty_resolution = LEDC_TIMER_8_BIT,
-        .freq_hz = 100};
+    ledc_timer_config_t timer_config = {0};
+    timer_config.freq_hz = 100;
     ledc_timer_config(&timer_config);
-    ledc_channel_config_t channel_config = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_sel = LEDC_TIMER_0,
-        .intr_type = LEDC_INTR_DISABLE,
-        .duty = 0,
-        .hpoint = 0};
+    ledc_channel_config_t channel_config = {0};
     if (s_first_white_pin != NOT_USED)
     {
         channel_config.channel = ZH_FIRST_WHITE_CHANNEL;
@@ -223,6 +215,7 @@ static void s_zh_gpio_init(void)
         channel_config.gpio_num = s_blue_pin;
         ledc_channel_config(&channel_config);
     }
+    ledc_fade_func_install(0);
     s_zh_gpio_set_level();
 }
 
@@ -234,23 +227,23 @@ static void s_zh_gpio_set_level(void)
         {
             if (s_led_type == HALT_W || s_led_type == HALT_RGBW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_brightness_status);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
             }
             if (s_led_type == HALT_WW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
             }
             if (s_led_type == HALT_RGB)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
@@ -267,14 +260,14 @@ static void s_zh_gpio_set_level(void)
         {
             if (s_led_type == HALT_W)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_brightness_status);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
             }
             if (s_led_type == HALT_WW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
@@ -289,11 +282,11 @@ static void s_zh_gpio_set_level(void)
             }
             if (s_led_type == HALT_RGB || s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
             }
         }
@@ -342,7 +335,7 @@ static void s_zh_send_led_attributes_message_task(void *pvParameter)
 {
     const esp_app_desc_t *app_info = esp_ota_get_app_description();
     zh_attributes_message_t attributes_message = {0};
-    attributes_message.chip_type = HACHT_ESP32;
+    attributes_message.chip_type = HACHT_ESP8266;
     strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
     attributes_message.cpu_frequency = CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ;
     attributes_message.reset_reason = (uint8_t)esp_reset_reason();
@@ -452,7 +445,7 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
     zh_espnow_data_t data_out = {0};
     zh_espnow_ota_message_t espnow_ota_message = {0};
     data_out.device_type = ZHDT_LED;
-    espnow_ota_message.chip_type = HACHT_ESP32;
+    espnow_ota_message.chip_type = HACHT_ESP8266;
     data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
     switch (event_id)
     {
@@ -477,10 +470,10 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
                         memcpy(s_gateway_mac, recv_data->mac_addr, 6);
                         if (s_led_type != HALT_NONE)
                         {
-                            xTaskCreatePinnedToCore(&s_zh_send_led_config_message_task, "s_zh_send_led_config_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_config_message_task, tskNO_AFFINITY);
-                            xTaskCreatePinnedToCore(&s_zh_send_led_status_message_task, "s_zh_send_led_status_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_status_message_task, tskNO_AFFINITY);
-                            xTaskCreatePinnedToCore(&s_zh_send_led_attributes_message_task, "s_zh_send_led_attributes_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_attributes_message_task, tskNO_AFFINITY);
-                            xTaskCreatePinnedToCore(&s_zh_send_led_keep_alive_message_task, "s_zh_send_led_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_keep_alive_message_task, tskNO_AFFINITY);
+                            xTaskCreate(&s_zh_send_led_config_message_task, "s_zh_send_led_config_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_config_message_task);
+                            xTaskCreate(&s_zh_send_led_status_message_task, "s_zh_send_led_status_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_status_message_task);
+                            xTaskCreate(&s_zh_send_led_attributes_message_task, "s_zh_send_led_attributes_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_attributes_message_task);
+                            xTaskCreate(&s_zh_send_led_keep_alive_message_task, "s_zh_send_led_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_keep_alive_message_task);
                         }
                     }
                     if (esp_timer_start_once(s_gateway_availability_check_timer, data_in.payload_data.keep_alive_message.message_frequency * 3000000) == ESP_ERR_INVALID_STATE)
