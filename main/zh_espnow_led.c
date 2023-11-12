@@ -28,7 +28,7 @@ static uint8_t s_blue_pin = NOT_USED;
 
 static uint8_t s_led_status = OFF;
 static uint8_t s_brightness_status = 0;
-static uint16_t s_temperature_status = 0;
+static uint16_t s_temperature_status = 255;
 static uint8_t s_red_status = 0;
 static uint8_t s_green_status = 0;
 static uint8_t s_blue_status = 0;
