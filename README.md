@@ -1,6 +1,6 @@
 # ESP-NOW led
 
-ESP-NOW based led controller/light for ESP32 RTOS SDK. Alternate firmware for Tuya/SmartLife/eWeLink WiFi led controllers/lights.
+ESP-NOW based led controller/light for ESP8266 RTOS SDK. Alternate firmware for Tuya/SmartLife/eWeLink WiFi led controllers/lights.
 
 There are two branches - for ESP8266 family and for ESP32 family. Please use the appropriate one.
 
