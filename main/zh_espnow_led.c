@@ -182,7 +182,7 @@ static void s_zh_save_status(void)
 static void s_zh_gpio_init(void)
 {
     ledc_timer_config_t timer_config = {0};
-    timer_config.freq_hz = 100;
+    timer_config.freq_hz = 1000;
     ledc_timer_config(&timer_config);
     ledc_channel_config_t channel_config = {0};
     if (s_first_white_pin != NOT_USED)
@@ -511,7 +511,10 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
                 break;
             case ZHPT_UPDATE:
                 s_update_partition = esp_ota_get_next_update_partition(NULL);
-                strcpy(espnow_ota_message.app_name, app_info->project_name);
+                char *app_name = (char *)calloc(1, strlen(app_info->project_name) + 5 + 1);
+                sprintf(app_name, "%s.app%d", app_info->project_name, s_update_partition->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0 + 1);
+                strcpy(espnow_ota_message.app_name, app_name);
+                free(app_name);
                 strcpy(espnow_ota_message.app_version, app_info->version);
                 data_out.payload_type = ZHPT_UPDATE;
                 data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
