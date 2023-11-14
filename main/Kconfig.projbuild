@@ -17,7 +17,9 @@ menu "ZH ESP-NOW Led Configuration"
 			RGB - Red + Green + Blue colors.
 			RGBW - Red + Green + Blue + Cold white or Warm white colors.
 			RGBWW - Red + Green + Blue + Cold white + Warm white colors.
-		default LED_TYPE_W
+		default LED_TYPE_N
+		config LED_TYPE_N
+			bool "N"
 		config LED_TYPE_W
 			bool "W"
 		config LED_TYPE_WW
