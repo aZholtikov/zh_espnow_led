@@ -28,6 +28,10 @@ make
 make flash
 ```
 
+## Tested on
+
+See [here](http://git.zh.com.ru/alexey.zholtikov/zh_espnow_led/src/branch/esp8266/hardware).
+
 ## Attention
 
 1. A gateway is required. For details see [zh_gateway](http://git.zh.com.ru/alexey.zholtikov/zh_gateway).
