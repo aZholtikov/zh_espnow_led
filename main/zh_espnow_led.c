@@ -10,21 +10,20 @@
 #include "zh_espnow.h"
 #include "zh_config.h"
 
-#define ZH_FIRST_WHITE_CHANNEL LEDC_CHANNEL_0
-#define ZH_SECOND_WHITE_CHANNEL LEDC_CHANNEL_1
-#define ZH_RED_CHANNEL LEDC_CHANNEL_2
-#define ZH_GREEN_CHANNEL LEDC_CHANNEL_3
-#define ZH_BLUE_CHANNEL LEDC_CHANNEL_4
-
 #define ZH_MESSAGE_TASK_PRIORITY 2
 #define ZH_MESSAGE_STACK_SIZE 2048
 
 static uint8_t s_led_type = HALT_NONE;
 static uint8_t s_first_white_pin = NOT_USED;
+static uint8_t s_first_white_channel = 0;
 static uint8_t s_second_white_pin = NOT_USED;
+static uint8_t s_second_white_channel = 0;
 static uint8_t s_red_pin = NOT_USED;
+static uint8_t s_red_channel = 0;
 static uint8_t s_green_pin = NOT_USED;
+static uint8_t s_green_channel = 0;
 static uint8_t s_blue_pin = NOT_USED;
+static uint8_t s_blue_channel = 0;
 
 static uint8_t s_led_status = OFF;
 static uint8_t s_brightness_status = 0;
@@ -69,14 +68,29 @@ void app_main(void)
 {
 #if CONFIG_LED_TYPE_W
     s_led_type = HALT_W;
+    s_first_white_channel = 0;
 #elif CONFIG_LED_TYPE_WW
     s_led_type = HALT_WW;
+    s_first_white_channel = 0;
+    s_second_white_channel = 1;
 #elif CONFIG_LED_TYPE_RGB
     s_led_type = HALT_RGB;
+    s_red_channel = 0;
+    s_green_channel = 1;
+    s_blue_channel = 2;
 #elif CONFIG_LED_TYPE_RGBW
     s_led_type = HALT_RGBW;
+    s_first_white_channel = 0;
+    s_red_channel = 1;
+    s_green_channel = 2;
+    s_blue_channel = 3;
 #elif CONFIG_LED_TYPE_RGBWW
     s_led_type = HALT_RGBWW;
+    s_first_white_channel = 0;
+    s_second_white_channel = 1;
+    s_red_channel = 2;
+    s_green_channel = 3;
+    s_blue_channel = 4;
 #endif
 #if CONFIG_FIRST_WHITE_PIN
     s_first_white_pin = CONFIG_FIRST_WHITE_PIN;
@@ -125,10 +139,15 @@ static void s_zh_load_config(void)
     }
     nvs_get_u8(nvs_handle, "led_type", &s_led_type);
     nvs_get_u8(nvs_handle, "frs_white_pin", &s_first_white_pin);
+    nvs_get_u8(nvs_handle, "frs_white_ch", &s_first_white_channel);
     nvs_get_u8(nvs_handle, "sec_white_pin", &s_second_white_pin);
+    nvs_get_u8(nvs_handle, "sec_white_ch", &s_second_white_channel);
     nvs_get_u8(nvs_handle, "red_pin", &s_red_pin);
+    nvs_get_u8(nvs_handle, "red_ch", &s_red_channel);
     nvs_get_u8(nvs_handle, "green_pin", &s_green_pin);
+    nvs_get_u8(nvs_handle, "green_ch", &s_green_channel);
     nvs_get_u8(nvs_handle, "blue_pin", &s_blue_pin);
+    nvs_get_u8(nvs_handle, "blue_ch", &s_blue_channel);
     nvs_close(nvs_handle);
 }
 
@@ -138,10 +157,15 @@ static void s_zh_save_config(void)
     nvs_open("config", NVS_READWRITE, &nvs_handle);
     nvs_set_u8(nvs_handle, "led_type", s_led_type);
     nvs_set_u8(nvs_handle, "frs_white_pin", s_first_white_pin);
+    nvs_set_u8(nvs_handle, "frs_white_ch", s_first_white_channel);
     nvs_set_u8(nvs_handle, "sec_white_pin", s_second_white_pin);
+    nvs_set_u8(nvs_handle, "sec_white_ch", s_second_white_channel);
     nvs_set_u8(nvs_handle, "red_pin", s_red_pin);
+    nvs_set_u8(nvs_handle, "red_ch", s_red_channel);
     nvs_set_u8(nvs_handle, "green_pin", s_green_pin);
+    nvs_set_u8(nvs_handle, "green_ch", s_green_channel);
     nvs_set_u8(nvs_handle, "blue_pin", s_blue_pin);
+    nvs_set_u8(nvs_handle, "blue_ch", s_blue_channel);
     nvs_close(nvs_handle);
 }
 
@@ -187,31 +211,31 @@ static void s_zh_gpio_init(void)
     ledc_channel_config_t channel_config = {0};
     if (s_first_white_pin != NOT_USED)
     {
-        channel_config.channel = ZH_FIRST_WHITE_CHANNEL;
+        channel_config.channel = s_first_white_channel;
         channel_config.gpio_num = s_first_white_pin;
         ledc_channel_config(&channel_config);
     }
     if (s_second_white_pin != NOT_USED)
     {
-        channel_config.channel = ZH_SECOND_WHITE_CHANNEL;
+        channel_config.channel = s_second_white_channel;
         channel_config.gpio_num = s_second_white_pin;
         ledc_channel_config(&channel_config);
     }
     if (s_red_pin != NOT_USED)
     {
-        channel_config.channel = ZH_RED_CHANNEL;
+        channel_config.channel = s_red_channel;
         channel_config.gpio_num = s_red_pin;
         ledc_channel_config(&channel_config);
     }
     if (s_green_pin != NOT_USED)
     {
-        channel_config.channel = ZH_GREEN_CHANNEL;
+        channel_config.channel = s_green_channel;
         channel_config.gpio_num = s_green_pin;
         ledc_channel_config(&channel_config);
     }
     if (s_blue_pin != NOT_USED)
     {
-        channel_config.channel = ZH_BLUE_CHANNEL;
+        channel_config.channel = s_blue_channel;
         channel_config.gpio_num = s_blue_pin;
         ledc_channel_config(&channel_config);
     }
@@ -227,67 +251,67 @@ static void s_zh_gpio_set_level(void)
         {
             if (s_led_type == HALT_W || s_led_type == HALT_RGBW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
             }
             if (s_led_type == HALT_WW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
             }
             if (s_led_type == HALT_RGB)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
         }
         else
         {
             if (s_led_type == HALT_W)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
             }
             if (s_led_type == HALT_WW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
             }
             if (s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
             }
             if (s_led_type == HALT_RGB || s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
         }
     }
@@ -295,28 +319,28 @@ static void s_zh_gpio_set_level(void)
     {
         if (s_first_white_pin != NOT_USED)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_FIRST_WHITE_CHANNEL);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
         }
         if (s_second_white_pin != NOT_USED)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_SECOND_WHITE_CHANNEL);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
         }
         if (s_red_pin != NOT_USED)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_RED_CHANNEL);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
         }
         if (s_green_pin != NOT_USED)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_GREEN_CHANNEL);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
         }
         if (s_blue_pin != NOT_USED)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, ZH_BLUE_CHANNEL);
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
         }
     }
     s_zh_save_status();
