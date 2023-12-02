@@ -36,9 +36,7 @@ static uint8_t s_gateway_mac[6] = {0};
 static bool s_gateway_is_available = false;
 
 static TaskHandle_t s_led_attributes_message_task = {0};
-static TaskHandle_t s_led_config_message_task = {0};
 static TaskHandle_t s_led_keep_alive_message_task = {0};
-static TaskHandle_t s_led_status_message_task = {0};
 
 static esp_timer_handle_t s_gateway_availability_check_timer = {0};
 
@@ -56,9 +54,8 @@ static void s_zh_gpio_set_level(void);
 static int32_t s_zh_map(int32_t value, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
 
 static void s_zh_send_led_attributes_message_task(void *pvParameter);
-static void s_zh_send_led_config_message_task(void *pvParameter);
+static void s_zh_send_led_config_message(void);
 static void s_zh_send_led_keep_alive_message_task(void *pvParameter);
-static void s_zh_send_led_status_message_task(void *pvParameter);
 static void s_zh_send_led_status_message(void);
 
 static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
@@ -116,6 +113,7 @@ void app_main(void)
     wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&wifi_init_config);
     esp_wifi_set_mode(WIFI_MODE_STA);
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
     esp_wifi_start();
     zh_espnow_init_config_t zh_espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
     zh_espnow_init(&zh_espnow_init_config);
@@ -380,7 +378,7 @@ static void s_zh_send_led_attributes_message_task(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-static void s_zh_send_led_config_message_task(void *pvParameter)
+static void s_zh_send_led_config_message(void)
 {
     zh_led_config_message_t led_config_message = {0};
     led_config_message.unique_id = 1;
@@ -397,12 +395,7 @@ static void s_zh_send_led_config_message_task(void *pvParameter)
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_CONFIG;
     data.payload_data = (zh_payload_data_t)config_message;
-    for (;;)
-    {
-        zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
-        vTaskDelay(300000 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
+    zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
@@ -417,29 +410,6 @@ static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
     {
         zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(10000 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
-}
-
-static void s_zh_send_led_status_message_task(void *pvParameter)
-{
-    zh_led_status_message_t led_status_message = {0};
-    zh_status_message_t status_message = {0};
-    zh_espnow_data_t data = {0};
-    data.device_type = ZHDT_LED;
-    data.payload_type = ZHPT_STATE;
-    for (;;)
-    {
-        led_status_message.status = (s_led_status == ON) ? HAONOFT_ON : HAONOFT_OFF;
-        led_status_message.brightness = s_brightness_status;
-        led_status_message.temperature = s_temperature_status;
-        led_status_message.red = s_red_status;
-        led_status_message.green = s_green_status;
-        led_status_message.blue = s_blue_status;
-        status_message = (zh_status_message_t)led_status_message;
-        data.payload_data = (zh_payload_data_t)status_message;
-        zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
-        vTaskDelay(300000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
@@ -494,8 +464,8 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
                         memcpy(s_gateway_mac, recv_data->mac_addr, 6);
                         if (s_led_type != HALT_NONE)
                         {
-                            xTaskCreate(&s_zh_send_led_config_message_task, "s_zh_send_led_config_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_config_message_task);
-                            xTaskCreate(&s_zh_send_led_status_message_task, "s_zh_send_led_status_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_status_message_task);
+                            s_zh_send_led_config_message();
+                            s_zh_send_led_status_message();
                             xTaskCreate(&s_zh_send_led_attributes_message_task, "s_zh_send_led_attributes_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_attributes_message_task);
                             xTaskCreate(&s_zh_send_led_keep_alive_message_task, "s_zh_send_led_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, NULL, ZH_MESSAGE_TASK_PRIORITY, &s_led_keep_alive_message_task);
                         }
@@ -547,6 +517,8 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
             case ZHPT_UPDATE_BEGIN:
                 esp_ota_begin(s_update_partition, OTA_SIZE_UNKNOWN, &s_update_handle);
                 s_ota_message_part_number = 1;
+                data_out.payload_type = ZHPT_UPDATE_PROGRESS;
+                zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_PROGRESS:
                 if (s_ota_message_part_number == data_in.payload_data.espnow_ota_message.part)
@@ -586,7 +558,12 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
     ZH_ESPNOW_EVENT_HANDLER_EXIT:
         free(recv_data->data);
         break;
-    case ZH_ESPNOW_ON_SEND_EVENT:
+    case ZH_ESPNOW_ON_SEND_EVENT:;
+        zh_espnow_event_on_send_t *send_data = event_data;
+        if (send_data->status == ESP_NOW_SEND_FAIL && s_gateway_is_available == true)
+        {
+            s_zh_set_gateway_offline_status();
+        }
         break;
     default:
         break;
@@ -600,7 +577,5 @@ static void s_zh_set_gateway_offline_status(void)
     {
         vTaskDelete(s_led_attributes_message_task);
         vTaskDelete(s_led_keep_alive_message_task);
-        vTaskDelete(s_led_status_message_task);
-        vTaskDelete(s_led_config_message_task);
     }
 }
