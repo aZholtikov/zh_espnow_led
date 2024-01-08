@@ -32,3 +32,5 @@ idf.py -p (PORT) flash
 ## Attention
 
 1. A gateway is required. For details see [zh_gateway](http://git.zh.com.ru/alexey.zholtikov/zh_gateway).
+
+Any [feedback](mailto:github@azholtikov.ru) will be gladly accepted.
