@@ -37,3 +37,5 @@ See [here](http://git.zh.com.ru/alexey.zholtikov/zh_espnow_led/src/branch/esp826
 
 1. A gateway is required. For details see [zh_gateway](http://git.zh.com.ru/alexey.zholtikov/zh_gateway).
 2. Use the "make ota" command instead of "make" to prepare 2 bin files for OTA update.
+
+Any [feedback](mailto:github@azholtikov.ru) will be gladly accepted.
