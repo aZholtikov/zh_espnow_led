@@ -56,7 +56,7 @@ static void s_zh_send_led_keep_alive_message_task(void *pvParameter);
 static void s_zh_send_led_status_message(void);
 
 static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
-static void s_zh_set_gateway_ZH_OFFline_status(void);
+static void s_zh_set_gateway_offline_status(void);
 
 void app_main(void)
 {
@@ -469,7 +469,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
                 {
                     if (s_gateway_is_available == true)
                     {
-                        s_zh_set_gateway_ZH_OFFline_status();
+                        s_zh_set_gateway_offline_status();
                     }
                 }
                 break;
@@ -550,7 +550,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
         zh_network_event_on_send_t *send_data = event_data;
         if (send_data->status == ZH_NETWORK_SEND_FAIL && s_gateway_is_available == true)
         {
-            s_zh_set_gateway_ZH_OFFline_status();
+            s_zh_set_gateway_offline_status();
         }
         break;
     default:
@@ -558,7 +558,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
     }
 }
 
-static void s_zh_set_gateway_ZH_OFFline_status(void)
+static void s_zh_set_gateway_offline_status(void)
 {
     s_gateway_is_available = false;
     if (s_led_type != HALT_NONE)
