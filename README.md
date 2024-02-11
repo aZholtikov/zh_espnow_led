@@ -4,6 +4,10 @@ ESP-NOW based led controller/light for ESP8266 RTOS SDK. Alternate firmware for 
 
 There are two branches - for ESP8266 family and for ESP32 family. Please use the appropriate one.
 
+## Tested on
+
+1. ESP8266 RTOS_SDK v3.4
+
 ## Features
 
 1. Saves the last state when the power is turned off.
@@ -29,7 +33,7 @@ make
 make flash
 ```
 
-## Tested on
+## Tested hardware
 
 See [here](http://git.zh.com.ru/alexey.zholtikov/zh_espnow_led/src/branch/esp8266/hardware).
 

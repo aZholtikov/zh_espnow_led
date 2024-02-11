@@ -13,18 +13,18 @@
 #define ZH_MESSAGE_STACK_SIZE 2048
 
 static uint8_t s_led_type = HALT_NONE;
-static uint8_t s_first_white_pin = NOT_USED;
+static uint8_t s_first_white_pin = ZH_NOT_USED;
 static uint8_t s_first_white_channel = 0;
-static uint8_t s_second_white_pin = NOT_USED;
+static uint8_t s_second_white_pin = ZH_NOT_USED;
 static uint8_t s_second_white_channel = 0;
-static uint8_t s_red_pin = NOT_USED;
+static uint8_t s_red_pin = ZH_NOT_USED;
 static uint8_t s_red_channel = 0;
-static uint8_t s_green_pin = NOT_USED;
+static uint8_t s_green_pin = ZH_NOT_USED;
 static uint8_t s_green_channel = 0;
-static uint8_t s_blue_pin = NOT_USED;
+static uint8_t s_blue_pin = ZH_NOT_USED;
 static uint8_t s_blue_channel = 0;
 
-static uint8_t s_led_status = OFF;
+static uint8_t s_led_status = ZH_OFF;
 static uint8_t s_brightness_status = 0;
 static uint16_t s_temperature_status = 255;
 static uint8_t s_red_status = 0;
@@ -56,7 +56,7 @@ static void s_zh_send_led_keep_alive_message_task(void *pvParameter);
 static void s_zh_send_led_status_message(void);
 
 static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
-static void s_zh_set_gateway_offline_status(void);
+static void s_zh_set_gateway_ZH_OFFline_status(void);
 
 void app_main(void)
 {
@@ -201,31 +201,31 @@ static void s_zh_gpio_init(void)
     timer_config.freq_hz = 1000;
     ledc_timer_config(&timer_config);
     ledc_channel_config_t channel_config = {0};
-    if (s_first_white_pin != NOT_USED)
+    if (s_first_white_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_first_white_channel;
         channel_config.gpio_num = s_first_white_pin;
         ledc_channel_config(&channel_config);
     }
-    if (s_second_white_pin != NOT_USED)
+    if (s_second_white_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_second_white_channel;
         channel_config.gpio_num = s_second_white_pin;
         ledc_channel_config(&channel_config);
     }
-    if (s_red_pin != NOT_USED)
+    if (s_red_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_red_channel;
         channel_config.gpio_num = s_red_pin;
         ledc_channel_config(&channel_config);
     }
-    if (s_green_pin != NOT_USED)
+    if (s_green_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_green_channel;
         channel_config.gpio_num = s_green_pin;
         ledc_channel_config(&channel_config);
     }
-    if (s_blue_pin != NOT_USED)
+    if (s_blue_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_blue_channel;
         channel_config.gpio_num = s_blue_pin;
@@ -237,7 +237,7 @@ static void s_zh_gpio_init(void)
 
 static void s_zh_gpio_set_level(void)
 {
-    if (s_led_status == ON)
+    if (s_led_status == ZH_ON)
     {
         if (s_red_status == 255 && s_green_status == 255 && s_blue_status == 255)
         {
@@ -309,27 +309,27 @@ static void s_zh_gpio_set_level(void)
     }
     else
     {
-        if (s_first_white_pin != NOT_USED)
+        if (s_first_white_pin != ZH_NOT_USED)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, 0);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
         }
-        if (s_second_white_pin != NOT_USED)
+        if (s_second_white_pin != ZH_NOT_USED)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, 0);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
         }
-        if (s_red_pin != NOT_USED)
+        if (s_red_pin != ZH_NOT_USED)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, 0);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
         }
-        if (s_green_pin != NOT_USED)
+        if (s_green_pin != ZH_NOT_USED)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, 0);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
         }
-        if (s_blue_pin != NOT_USED)
+        if (s_blue_pin != ZH_NOT_USED)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, 0);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
@@ -395,7 +395,7 @@ static void s_zh_send_led_config_message(void)
 static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
 {
     zh_keep_alive_message_t keep_alive_message = {0};
-    keep_alive_message.online_status = ONLINE;
+    keep_alive_message.online_status = ZH_ONLINE;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_KEEP_ALIVE;
@@ -411,7 +411,7 @@ static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
 static void s_zh_send_led_status_message(void)
 {
     zh_led_status_message_t led_status_message = {0};
-    led_status_message.status = (s_led_status == ON) ? HAONOFT_ON : HAONOFT_OFF;
+    led_status_message.status = (s_led_status == ZH_ON) ? HAONOFT_ON : HAONOFT_OFF;
     led_status_message.brightness = s_brightness_status;
     led_status_message.temperature = s_temperature_status;
     led_status_message.red = s_red_status;
@@ -450,7 +450,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
             switch (data_in.payload_type)
             {
             case ZHPT_KEEP_ALIVE:
-                if (data_in.payload_data.keep_alive_message.online_status == ONLINE)
+                if (data_in.payload_data.keep_alive_message.online_status == ZH_ONLINE)
                 {
                     if (s_gateway_is_available == false)
                     {
@@ -469,12 +469,12 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
                 {
                     if (s_gateway_is_available == true)
                     {
-                        s_zh_set_gateway_offline_status();
+                        s_zh_set_gateway_ZH_OFFline_status();
                     }
                 }
                 break;
             case ZHPT_SET:
-                s_led_status = (data_in.payload_data.status_message.led_status_message.status == HAONOFT_ON) ? ON : OFF;
+                s_led_status = (data_in.payload_data.status_message.led_status_message.status == HAONOFT_ON) ? ZH_ON : ZH_OFF;
                 s_zh_gpio_set_level();
                 break;
             case ZHPT_BRIGHTNESS:
@@ -550,7 +550,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
         zh_network_event_on_send_t *send_data = event_data;
         if (send_data->status == ZH_NETWORK_SEND_FAIL && s_gateway_is_available == true)
         {
-            s_zh_set_gateway_offline_status();
+            s_zh_set_gateway_ZH_OFFline_status();
         }
         break;
     default:
@@ -558,7 +558,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
     }
 }
 
-static void s_zh_set_gateway_offline_status(void)
+static void s_zh_set_gateway_ZH_OFFline_status(void)
 {
     s_gateway_is_available = false;
     if (s_led_type != HALT_NONE)
