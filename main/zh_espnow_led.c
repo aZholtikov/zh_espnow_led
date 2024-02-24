@@ -5,8 +5,9 @@
 #include "esp_event.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
+#include "esp_timer.h"
 #include "esp_ota_ops.h"
-#include "zh_network.h"
+#include "zh_espnow.h"
 #include "zh_config.h"
 
 #define ZH_MESSAGE_TASK_PRIORITY 2
@@ -55,7 +56,7 @@ static void s_zh_send_led_config_message(void);
 static void s_zh_send_led_keep_alive_message_task(void *pvParameter);
 static void s_zh_send_led_status_message(void);
 
-static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 static void s_zh_set_gateway_offline_status(void);
 
 void app_main(void)
@@ -110,11 +111,11 @@ void app_main(void)
     wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&wifi_init_config);
     esp_wifi_set_mode(WIFI_MODE_STA);
-    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B);
     esp_wifi_start();
-    zh_network_init_config_t zh_network_init_config = ZH_NETWORK_INIT_CONFIG_DEFAULT();
-    zh_network_init(&zh_network_init_config);
-    esp_event_handler_register(ZH_NETWORK, ESP_EVENT_ANY_ID, &s_zh_network_event_handler, NULL);
+    zh_espnow_init_config_t zh_espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
+    zh_espnow_init(&zh_espnow_init_config);
+    esp_event_handler_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &s_zh_espnow_event_handler, NULL);
 }
 
 static void s_zh_load_config(void)
@@ -366,7 +367,7 @@ static void s_zh_send_led_attributes_message_task(void *pvParameter)
         attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
         attributes_message.uptime = esp_timer_get_time() / 1000000;
         data.payload_data = (zh_payload_data_t)attributes_message;
-        zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(60000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
@@ -389,7 +390,7 @@ static void s_zh_send_led_config_message(void)
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_CONFIG;
     data.payload_data = (zh_payload_data_t)config_message;
-    zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
@@ -402,7 +403,7 @@ static void s_zh_send_led_keep_alive_message_task(void *pvParameter)
     data.payload_data = (zh_payload_data_t)keep_alive_message;
     for (;;)
     {
-        zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
@@ -423,10 +424,10 @@ static void s_zh_send_led_status_message(void)
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_STATE;
     data.payload_data = (zh_payload_data_t)status_message;
-    zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    zh_espnow_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
-static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     const esp_app_desc_t *app_info = esp_ota_get_app_description();
     zh_espnow_data_t data_in = {0};
@@ -437,11 +438,11 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
     data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
     switch (event_id)
     {
-    case ZH_NETWORK_ON_RECV_EVENT:;
-        zh_network_event_on_recv_t *recv_data = event_data;
+    case ZH_ESPNOW_ON_RECV_EVENT:;
+        zh_espnow_event_on_recv_t *recv_data = event_data;
         if (recv_data->data_len != sizeof(zh_espnow_data_t))
         {
-            goto ZH_NETWORK_EVENT_HANDLER_EXIT;
+            goto ZH_ESPNOW_EVENT_HANDLER_EXIT;
         }
         memcpy(&data_in, recv_data->data, recv_data->data_len);
         switch (data_in.device_type)
@@ -500,13 +501,13 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
                 strcpy(espnow_ota_message.app_version, app_info->version);
                 data_out.payload_type = ZHPT_UPDATE;
                 data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
-                zh_network_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
+                zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_BEGIN:
                 esp_ota_begin(s_update_partition, OTA_SIZE_UNKNOWN, &s_update_handle);
                 s_ota_message_part_number = 1;
                 data_out.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_network_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
+                zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_PROGRESS:
                 if (s_ota_message_part_number == data_in.payload_data.espnow_ota_message.part)
@@ -515,7 +516,7 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
                     esp_ota_write(s_update_handle, (const void *)data_in.payload_data.espnow_ota_message.data, data_in.payload_data.espnow_ota_message.data_len);
                 }
                 data_out.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_network_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
+                zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_ERROR:
                 esp_ota_end(s_update_handle);
@@ -524,12 +525,12 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
                 if (esp_ota_end(s_update_handle) != ESP_OK)
                 {
                     data_out.payload_type = ZHPT_UPDATE_FAIL;
-                    zh_network_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
+                    zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                     break;
                 }
                 esp_ota_set_boot_partition(s_update_partition);
                 data_out.payload_type = ZHPT_UPDATE_SUCCESS;
-                zh_network_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
+                zh_espnow_send(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
                 esp_restart();
                 break;
@@ -543,12 +544,12 @@ static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, i
         default:
             break;
         }
-    ZH_NETWORK_EVENT_HANDLER_EXIT:
+    ZH_ESPNOW_EVENT_HANDLER_EXIT:
         free(recv_data->data);
         break;
-    case ZH_NETWORK_ON_SEND_EVENT:;
-        zh_network_event_on_send_t *send_data = event_data;
-        if (send_data->status == ZH_NETWORK_SEND_FAIL && s_gateway_is_available == true)
+    case ZH_ESPNOW_ON_SEND_EVENT:;
+        zh_espnow_event_on_send_t *send_data = event_data;
+        if (send_data->status == ZH_ESPNOW_SEND_FAIL && s_gateway_is_available == true)
         {
             s_zh_set_gateway_offline_status();
         }
