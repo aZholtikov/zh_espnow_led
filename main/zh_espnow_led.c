@@ -12,10 +12,35 @@
 #include "zh_config.h"
 
 #if CONFIG_NETWORK_TYPE_DIRECT
+#include "zh_espnow.h"
 #define zh_send_message(a, b, c) zh_espnow_send(a, b, c)
-#endif
-#if CONFIG_NETWORK_TYPE_MESH
+#elif CONFIG_NETWORK_TYPE_MESH
+#include "zh_network.h"
 #define zh_send_message(a, b, c) zh_network_send(a, b, c)
+#endif
+
+#if CONFIG_IDF_TARGET_ESP8266
+#define ZH_CHIP_TYPE HACHT_ESP8266
+#elif CONFIG_IDF_TARGET_ESP32
+#define ZH_CHIP_TYPE HACHT_ESP32
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define ZH_CHIP_TYPE HACHT_ESP32S2
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define ZH_CHIP_TYPE HACHT_ESP32S3
+#elif CONFIG_IDF_TARGET_ESP32C2
+#define ZH_CHIP_TYPE HACHT_ESP32C2
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define ZH_CHIP_TYPE HACHT_ESP32C3
+#elif CONFIG_IDF_TARGET_ESP32C6
+#define ZH_CHIP_TYPE HACHT_ESP32C6
+#endif
+
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+#define ZH_CPU_FREQUENCY CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
+#define get_app_description() esp_app_get_description()
+#elif CONFIG_IDF_TARGET_ESP8266
+#define ZH_CPU_FREQUENCY CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ;
+#define get_app_description() esp_ota_get_app_description()
 #endif
 
 #define ZH_MESSAGE_TASK_PRIORITY 2
@@ -66,8 +91,7 @@ static void s_zh_send_led_status_message(void);
 
 #if CONFIG_NETWORK_TYPE_DIRECT
 static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
-#endif
-#if CONFIG_NETWORK_TYPE_MESH
+#elif CONFIG_NETWORK_TYPE_MESH
 static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 #endif
 static void s_zh_set_gateway_offline_status(void);
@@ -115,6 +139,11 @@ void app_main(void)
 #if CONFIG_BLUE_PIN
     s_blue_pin = CONFIG_BLUE_PIN;
 #endif
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state = {0};
+    esp_ota_get_state_partition(running, &ota_state);
+#endif
     nvs_flash_init();
     esp_netif_init();
     esp_event_loop_create_default();
@@ -129,12 +158,26 @@ void app_main(void)
 #if CONFIG_NETWORK_TYPE_DIRECT
     zh_espnow_init_config_t zh_espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
     zh_espnow_init(&zh_espnow_init_config);
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+    esp_event_handler_instance_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &s_zh_espnow_event_handler, NULL, NULL);
+#elif CONFIG_IDF_TARGET_ESP8266
     esp_event_handler_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &s_zh_espnow_event_handler, NULL);
 #endif
-#if CONFIG_NETWORK_TYPE_MESH
+#elif CONFIG_NETWORK_TYPE_MESH
     zh_network_init_config_t zh_network_init_config = ZH_NETWORK_INIT_CONFIG_DEFAULT();
     zh_network_init(&zh_network_init_config);
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+    esp_event_handler_instance_register(ZH_NETWORK, ESP_EVENT_ANY_ID, &s_zh_network_event_handler, NULL, NULL);
+#elif CONFIG_IDF_TARGET_ESP8266
     esp_event_handler_register(ZH_NETWORK, ESP_EVENT_ANY_ID, &s_zh_network_event_handler, NULL);
+#endif
+#endif
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+    if (ota_state == ESP_OTA_IMG_PENDING_VERIFY)
+    {
+        vTaskDelay(60000 / portTICK_PERIOD_MS);
+        esp_ota_mark_app_valid_cancel_rollback();
+    }
 #endif
 }
 
@@ -218,10 +261,26 @@ static void s_zh_save_status(void)
 
 static void s_zh_gpio_init(void)
 {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+    ledc_timer_config_t timer_config = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .timer_num = LEDC_TIMER_0,
+        .duty_resolution = LEDC_TIMER_8_BIT,
+        .freq_hz = 1000,
+        .clk_cfg = LEDC_AUTO_CLK};
+    ledc_timer_config(&timer_config);
+    ledc_channel_config_t channel_config = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .timer_sel = LEDC_TIMER_0,
+        .intr_type = LEDC_INTR_DISABLE,
+        .duty = 0,
+        .hpoint = 0};
+#elif CONFIG_IDF_TARGET_ESP8266
     ledc_timer_config_t timer_config = {0};
     timer_config.freq_hz = 1000;
     ledc_timer_config(&timer_config);
     ledc_channel_config_t channel_config = {0};
+#endif
     if (s_first_white_pin != ZH_NOT_USED)
     {
         channel_config.channel = s_first_white_channel;
@@ -252,7 +311,9 @@ static void s_zh_gpio_init(void)
         channel_config.gpio_num = s_blue_pin;
         ledc_channel_config(&channel_config);
     }
+#if CONFIG_IDF_TARGET_ESP8266
     ledc_fade_func_install(0);
+#endif
     s_zh_gpio_set_level();
 }
 
@@ -264,32 +325,47 @@ static void s_zh_gpio_set_level(void)
         {
             if (s_led_type == HALT_W || s_led_type == HALT_RGBW)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_brightness_status);
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
+#endif
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
             }
             if (s_led_type == HALT_WW || s_led_type == HALT_RGBWW)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)));
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
+#endif
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
             }
             if (s_led_type == HALT_RGB)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_brightness_status));
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+#endif
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, 0);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, 0);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
         }
@@ -297,14 +373,23 @@ static void s_zh_gpio_set_level(void)
         {
             if (s_led_type == HALT_W)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_brightness_status);
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, 8196));
+#endif
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
             }
             if (s_led_type == HALT_WW)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)));
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 500, 153, 0, 255)), 0, 255, 0, 8196));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel, s_zh_map(s_zh_map(s_brightness_status, 0, 255, 0, s_zh_map(s_temperature_status, 153, 500, 0, 255)), 0, 255, 0, 8196));
+#endif
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_first_white_channel);
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_second_white_channel);
             }
             if (s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
@@ -319,11 +404,17 @@ static void s_zh_gpio_set_level(void)
             }
             if (s_led_type == HALT_RGB || s_led_type == HALT_RGBW || s_led_type == HALT_RGBWW)
             {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_brightness_status));
+                ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_brightness_status));
+#elif CONFIG_IDF_TARGET_ESP8266
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_red_channel, s_zh_map(s_red_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_green_channel, s_zh_map(s_green_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, s_blue_channel, s_zh_map(s_blue_status, 0, 255, 0, s_zh_map(s_brightness_status, 0, 255, 0, 8196)));
+#endif
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_red_channel);
+                ledc_update_duty(LEDC_LOW_SPEED_MODE, s_green_channel);
                 ledc_update_duty(LEDC_LOW_SPEED_MODE, s_blue_channel);
             }
         }
@@ -370,11 +461,11 @@ static int32_t s_zh_map(int32_t value, int32_t in_min, int32_t in_max, int32_t o
 
 static void s_zh_send_led_attributes_message_task(void *pvParameter)
 {
-    const esp_app_desc_t *app_info = esp_ota_get_app_description();
+    const esp_app_desc_t *app_info = get_app_description();
     zh_attributes_message_t attributes_message = {0};
-    attributes_message.chip_type = HACHT_ESP8266;
+    attributes_message.chip_type = ZH_CHIP_TYPE;
     strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
-    attributes_message.cpu_frequency = CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ;
+    attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
     attributes_message.reset_reason = (uint8_t)esp_reset_reason();
     strcpy(attributes_message.app_name, app_info->project_name);
     strcpy(attributes_message.app_version, app_info->version);
@@ -449,17 +540,16 @@ static void s_zh_send_led_status_message(void)
 
 #if CONFIG_NETWORK_TYPE_DIRECT
 static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
-#endif
-#if CONFIG_NETWORK_TYPE_MESH
-    static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+#elif CONFIG_NETWORK_TYPE_MESH
+static void s_zh_network_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 #endif
 {
-    const esp_app_desc_t *app_info = esp_ota_get_app_description();
+    const esp_app_desc_t *app_info = get_app_description();
     zh_espnow_data_t data_in = {0};
     zh_espnow_data_t data_out = {0};
     zh_espnow_ota_message_t espnow_ota_message = {0};
     data_out.device_type = ZHDT_LED;
-    espnow_ota_message.chip_type = HACHT_ESP8266;
+    espnow_ota_message.chip_type = ZH_CHIP_TYPE;
     data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
     switch (event_id)
     {
@@ -470,8 +560,7 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
         {
             goto ZH_ESPNOW_EVENT_HANDLER_EXIT;
         }
-#endif
-#if CONFIG_NETWORK_TYPE_MESH
+#elif CONFIG_NETWORK_TYPE_MESH
     case ZH_NETWORK_ON_RECV_EVENT:;
         zh_network_event_on_recv_t *recv_data = event_data;
         if (recv_data->data_len != sizeof(zh_espnow_data_t))
@@ -529,11 +618,15 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
                 break;
             case ZHPT_UPDATE:
                 s_update_partition = esp_ota_get_next_update_partition(NULL);
+                strcpy(espnow_ota_message.app_version, app_info->version);
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+                strcpy(espnow_ota_message.app_name, app_info->project_name);
+#elif CONFIG_IDF_TARGET_ESP8266
                 char *app_name = (char *)calloc(1, strlen(app_info->project_name) + 5 + 1);
                 sprintf(app_name, "%s.app%d", app_info->project_name, s_update_partition->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0 + 1);
                 strcpy(espnow_ota_message.app_name, app_name);
                 free(app_name);
-                strcpy(espnow_ota_message.app_version, app_info->version);
+#endif
                 data_out.payload_type = ZHPT_UPDATE;
                 data_out.payload_data = (zh_payload_data_t)espnow_ota_message;
                 zh_send_message(s_gateway_mac, (uint8_t *)&data_out, sizeof(zh_espnow_data_t));
@@ -590,8 +683,7 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
             s_zh_set_gateway_offline_status();
         }
         break;
-#endif
-#if CONFIG_NETWORK_TYPE_MESH
+#elif CONFIG_NETWORK_TYPE_MESH
     ZH_NETWORK_EVENT_HANDLER_EXIT:
         free(recv_data->data);
         break;
