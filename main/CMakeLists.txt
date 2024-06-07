@@ -1,0 +1,1 @@
+idf_component_register(SRCS "zh_espnow_led.c" INCLUDE_DIRS "")

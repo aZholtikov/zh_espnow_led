@@ -1,0 +1,89 @@
+menu "ZH ESP-NOW Led Configuration"
+
+	config GPIO_RANGE_MAX
+		int
+		default 16 if IDF_TARGET_ESP8266
+		default 33 if IDF_TARGET_ESP32
+		default 46 if IDF_TARGET_ESP32S2
+		default 48 if IDF_TARGET_ESP32S3
+		default 18 if IDF_TARGET_ESP32C2
+		default 19 if IDF_TARGET_ESP32C3
+		default 30 if IDF_TARGET_ESP32C6
+
+	choice NETWORK_TYPE
+		prompt "Network type"
+		help
+			Network type.
+		default NETWORK_TYPE_DIRECT
+		config NETWORK_TYPE_DIRECT
+			bool "DIRECT"
+		config NETWORK_TYPE_MESH
+			bool "MESH"
+	endchoice
+	
+	choice LED_TYPE
+		prompt "Led type"
+		help
+			W - Cold white or Warm white or one another color.
+			WW - Cold white + Warm white.
+			RGB - Red + Green + Blue colors.
+			RGBW - Red + Green + Blue + Cold white or Warm white colors.
+			RGBWW - Red + Green + Blue + Cold white + Warm white colors.
+		default LED_TYPE_N
+		config LED_TYPE_N
+			bool "N"
+		config LED_TYPE_W
+			bool "W"
+		config LED_TYPE_WW
+			bool "WW"
+		config LED_TYPE_RGB
+			bool "RGB"
+		config LED_TYPE_RGBW
+			bool "RGBW"
+		config LED_TYPE_RGBWW
+			bool "RGBWW"
+	endchoice
+
+	config FIRST_WHITE_PIN
+		depends on LED_TYPE_W || LED_TYPE_WW || LED_TYPE_RGBW || LED_TYPE_RGBWW
+		int "First white GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 5
+		help
+			For W - Cold white or Warm white or one another color GPIO.
+			For RGBW - Cold white or Warm white GPIO.
+			For WW or RGBWW - Cold white GPIO.
+
+	config SECOND_WHITE_PIN
+		depends on LED_TYPE_WW || LED_TYPE_RGBWW
+		int "Second white GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 6
+		help
+			Warm white GPIO.
+
+	config RED_PIN
+		depends on LED_TYPE_RGB || LED_TYPE_RGBW || LED_TYPE_RGBWW
+		int "Red GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 7
+		help
+			Red color GPIO.
+
+	config GREEN_PIN
+		depends on LED_TYPE_RGB || LED_TYPE_RGBW || LED_TYPE_RGBWW
+		int "Green GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 8
+		help
+			Green color GPIO.
+
+	config BLUE_PIN
+		depends on LED_TYPE_RGB || LED_TYPE_RGBW || LED_TYPE_RGBWW
+		int "Blue GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 9
+		help
+			Blue color GPIO.
+
+endmenu 
