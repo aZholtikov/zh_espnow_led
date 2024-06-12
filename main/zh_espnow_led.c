@@ -593,7 +593,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
 #else
                 strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_info->project_name);
 #endif
-                data->device_type = ZHDT_SWITCH;
+                data->device_type = ZHDT_LED;
                 data->payload_type = ZHPT_UPDATE;
                 zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
