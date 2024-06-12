@@ -53,9 +53,26 @@
 
 typedef struct // Structure of data exchange between tasks, functions and event handlers.
 {
-    zh_led_hardware_config_message_t hardware_config; // Storage structure of led hardware configuration data.
-    zh_led_status_message_t status;                   // Storage structure of led status data.
-    struct                                            // Structure of led channels data.
+    struct // Storage structure of led hardware configuration data.
+    {
+        ha_led_type_t led_type;   // Led types. @note Used in zh_espnow_led firmware only.
+        uint8_t first_white_pin;  // First white GPIO number.
+        uint8_t second_white_pin; // Second white GPIO number (if present).
+        uint8_t red_pin;          // Red GPIO number (if present).
+        uint8_t green_pin;        // Green GPIO number (if present).
+        uint8_t blue_pin;         // Blue GPIO number (if present).
+    } hardware_config;
+    struct // Storage structure of led status data.
+    {
+        ha_on_off_type_t status;     // Status of the zh_espnow_led. @note Example - ON / OFF. @attention Must be same with set on led_config_message structure.
+        uint8_t brightness;          // Brightness value.
+        uint16_t temperature;        // White color temperature value (if present).
+        uint8_t red;                 // Red color value (if present).
+        uint8_t green;               // Green color value (if present).
+        uint8_t blue;                // Blue color value (if present).
+        ha_led_effect_type_t effect; // Reserved for future development.
+    } status;
+    struct // Structure of led channels data.
     {
         uint8_t first_white;  // First white channel.
         uint8_t second_white; // Second white channel.

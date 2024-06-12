@@ -407,22 +407,20 @@ void zh_send_led_attributes_message_task(void *pvParameter)
 {
     led_config_t *led_config = pvParameter;
     const esp_app_desc_t *app_info = get_app_description();
-    zh_attributes_message_t attributes_message = {0};
-    attributes_message.chip_type = ZH_CHIP_TYPE;
-    strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
-    attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
-    attributes_message.reset_reason = (uint8_t)esp_reset_reason();
-    strcpy(attributes_message.app_name, app_info->project_name);
-    strcpy(attributes_message.app_version, app_info->version);
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_ATTRIBUTES;
+    data.payload_data.attributes_message.chip_type = ZH_CHIP_TYPE;
+    strcpy(data.payload_data.attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
+    data.payload_data.attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
+    data.payload_data.attributes_message.reset_reason = (uint8_t)esp_reset_reason();
+    strcpy(data.payload_data.attributes_message.app_name, app_info->project_name);
+    strcpy(data.payload_data.attributes_message.app_version, app_info->version);
     for (;;)
     {
-        attributes_message.heap_size = esp_get_free_heap_size();
-        attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
-        attributes_message.uptime = esp_timer_get_time() / 1000000;
-        data.payload_data = (zh_payload_data_t)attributes_message;
+        data.payload_data.attributes_message.heap_size = esp_get_free_heap_size();
+        data.payload_data.attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
+        data.payload_data.attributes_message.uptime = esp_timer_get_time() / 1000000;
         zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(ZH_LED_ATTRIBUTES_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
@@ -431,45 +429,42 @@ void zh_send_led_attributes_message_task(void *pvParameter)
 
 void zh_send_led_config_message(const led_config_t *led_config)
 {
-    zh_led_config_message_t led_config_message = {0};
-    led_config_message.unique_id = 1;
-    led_config_message.led_type = led_config->hardware_config.led_type;
-    led_config_message.payload_on = HAONOFT_ON;
-    led_config_message.payload_off = HAONOFT_OFF;
-    led_config_message.enabled_by_default = true;
-    led_config_message.optimistic = false;
-    led_config_message.qos = 2;
-    led_config_message.retain = true;
-    zh_config_message_t config_message;
-    config_message = (zh_config_message_t)led_config_message;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_CONFIG;
-    data.payload_data = (zh_payload_data_t)config_message;
+    data.payload_data.config_message.led_config_message.unique_id = 1;
+    data.payload_data.config_message.led_config_message.led_type = led_config->hardware_config.led_type;
+    data.payload_data.config_message.led_config_message.payload_on = HAONOFT_ON;
+    data.payload_data.config_message.led_config_message.payload_off = HAONOFT_OFF;
+    data.payload_data.config_message.led_config_message.enabled_by_default = true;
+    data.payload_data.config_message.led_config_message.optimistic = false;
+    data.payload_data.config_message.led_config_message.qos = 2;
+    data.payload_data.config_message.led_config_message.retain = true;
     zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 void zh_send_led_hardware_config_message(const led_config_t *led_config)
 {
-    zh_config_message_t config_message = {0};
-    config_message = (zh_config_message_t)led_config->hardware_config;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_HARDWARE;
-    data.payload_data = (zh_payload_data_t)config_message;
+    data.payload_data.config_message.led_hardware_config_message.led_type = led_config->hardware_config.led_type;
+    data.payload_data.config_message.led_hardware_config_message.first_white_pin = led_config->hardware_config.first_white_pin;
+    data.payload_data.config_message.led_hardware_config_message.second_white_pin = led_config->hardware_config.second_white_pin;
+    data.payload_data.config_message.led_hardware_config_message.red_pin = led_config->hardware_config.red_pin;
+    data.payload_data.config_message.led_hardware_config_message.green_pin = led_config->hardware_config.green_pin;
+    data.payload_data.config_message.led_hardware_config_message.blue_pin = led_config->hardware_config.blue_pin;
     zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 void zh_send_led_keep_alive_message_task(void *pvParameter)
 {
     led_config_t *led_config = pvParameter;
-    zh_keep_alive_message_t keep_alive_message = {0};
-    keep_alive_message.online_status = ZH_ONLINE;
-    keep_alive_message.message_frequency = ZH_LED_KEEP_ALIVE_MESSAGE_FREQUENCY;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_KEEP_ALIVE;
-    data.payload_data = (zh_payload_data_t)keep_alive_message;
+    data.payload_data.keep_alive_message.online_status = ZH_ONLINE;
+    data.payload_data.keep_alive_message.message_frequency = ZH_LED_KEEP_ALIVE_MESSAGE_FREQUENCY;
     for (;;)
     {
         zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
@@ -480,19 +475,22 @@ void zh_send_led_keep_alive_message_task(void *pvParameter)
 
 void zh_send_led_status_message(const led_config_t *led_config)
 {
-    zh_status_message_t status_message = {0};
-    status_message = (zh_status_message_t)led_config->status;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_LED;
     data.payload_type = ZHPT_STATE;
-    data.payload_data = (zh_payload_data_t)status_message;
+    data.payload_data.status_message.led_status_message.status = led_config->status.status;
+    data.payload_data.status_message.led_status_message.brightness = led_config->status.brightness;
+    data.payload_data.status_message.led_status_message.temperature = led_config->status.temperature;
+    data.payload_data.status_message.led_status_message.red = led_config->status.red;
+    data.payload_data.status_message.led_status_message.green = led_config->status.green;
+    data.payload_data.status_message.led_status_message.blue = led_config->status.blue;
+    data.payload_data.status_message.led_status_message.effect = led_config->status.effect;
     zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     led_config_t *led_config = arg;
-    zh_espnow_data_t data = {0};
     switch (event_id)
     {
 #ifdef CONFIG_NETWORK_TYPE_DIRECT
@@ -510,14 +508,14 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             goto ZH_NETWORK_EVENT_HANDLER_EXIT;
         }
 #endif
-        memcpy(&data, recv_data->data, recv_data->data_len);
-        switch (data.device_type)
+        zh_espnow_data_t *data = (zh_espnow_data_t *)recv_data->data;
+        switch (data->device_type)
         {
         case ZHDT_GATEWAY:
-            switch (data.payload_type)
+            switch (data->payload_type)
             {
             case ZHPT_KEEP_ALIVE:
-                if (data.payload_data.keep_alive_message.online_status == ZH_ONLINE)
+                if (data->payload_data.keep_alive_message.online_status == ZH_ONLINE)
                 {
                     if (led_config->gateway_is_available == false)
                     {
@@ -547,55 +545,57 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 }
                 break;
             case ZHPT_SET:
-                led_config->status.status = data.payload_data.status_message.led_status_message.status;
+                led_config->status.status = data->payload_data.status_message.led_status_message.status;
                 zh_gpio_set_level(led_config);
                 zh_save_status(led_config);
                 zh_send_led_status_message(led_config);
                 break;
             case ZHPT_BRIGHTNESS:
-                led_config->status.brightness = data.payload_data.status_message.led_status_message.brightness;
+                led_config->status.brightness = data->payload_data.status_message.led_status_message.brightness;
                 zh_gpio_set_level(led_config);
                 zh_save_status(led_config);
                 zh_send_led_status_message(led_config);
                 break;
             case ZHPT_TEMPERATURE:
-                led_config->status.temperature = data.payload_data.status_message.led_status_message.temperature;
+                led_config->status.temperature = data->payload_data.status_message.led_status_message.temperature;
                 zh_gpio_set_level(led_config);
                 zh_save_status(led_config);
                 zh_send_led_status_message(led_config);
                 break;
             case ZHPT_RGB:
-                led_config->status.red = data.payload_data.status_message.led_status_message.red;
-                led_config->status.green = data.payload_data.status_message.led_status_message.green;
-                led_config->status.blue = data.payload_data.status_message.led_status_message.blue;
+                led_config->status.red = data->payload_data.status_message.led_status_message.red;
+                led_config->status.green = data->payload_data.status_message.led_status_message.green;
+                led_config->status.blue = data->payload_data.status_message.led_status_message.blue;
                 zh_gpio_set_level(led_config);
                 zh_save_status(led_config);
                 zh_send_led_status_message(led_config);
                 break;
             case ZHPT_HARDWARE:
-                led_config->hardware_config = data.payload_data.config_message.led_hardware_config_message;
+                led_config->hardware_config.led_type = data->payload_data.config_message.led_hardware_config_message.led_type;
+                led_config->hardware_config.first_white_pin = data->payload_data.config_message.led_hardware_config_message.first_white_pin;
+                led_config->hardware_config.second_white_pin = data->payload_data.config_message.led_hardware_config_message.second_white_pin;
+                led_config->hardware_config.red_pin = data->payload_data.config_message.led_hardware_config_message.red_pin;
+                led_config->hardware_config.green_pin = data->payload_data.config_message.led_hardware_config_message.green_pin;
+                led_config->hardware_config.blue_pin = data->payload_data.config_message.led_hardware_config_message.blue_pin;
                 zh_save_config(led_config);
                 esp_restart();
                 break;
             case ZHPT_UPDATE:;
                 const esp_app_desc_t *app_info = get_app_description();
                 led_config->update_partition = esp_ota_get_next_update_partition(NULL);
-                zh_espnow_ota_message_t espnow_ota_message = {0};
-                espnow_ota_message.chip_type = ZH_CHIP_TYPE;
-                strcpy(espnow_ota_message.app_version, app_info->version);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_version, app_info->version);
 #ifdef CONFIG_IDF_TARGET_ESP8266
                 char *app_name = (char *)heap_caps_malloc(strlen(app_info->project_name) + 6, MALLOC_CAP_8BIT);
                 memset(app_name, 0, strlen(app_info->project_name) + 6);
                 sprintf(app_name, "%s.app%d", app_info->project_name, led_config->update_partition->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0 + 1);
-                strcpy(espnow_ota_message.app_name, app_name);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_name);
                 heap_caps_free(app_name);
 #else
-                strcpy(espnow_ota_message.app_name, app_info->project_name);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_info->project_name);
 #endif
-                data.device_type = ZHDT_LED;
-                data.payload_type = ZHPT_UPDATE;
-                data.payload_data = (zh_payload_data_t)espnow_ota_message;
-                zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_UPDATE;
+                zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_BEGIN:
 #ifdef CONFIG_IDF_TARGET_ESP8266
@@ -604,19 +604,19 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 esp_ota_begin(led_config->update_partition, OTA_SIZE_UNKNOWN, (esp_ota_handle_t *)&led_config->update_handle);
 #endif
                 led_config->ota_message_part_number = 1;
-                data.device_type = ZHDT_LED;
-                data.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_LED;
+                data->payload_type = ZHPT_UPDATE_PROGRESS;
+                zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_PROGRESS:
-                if (led_config->ota_message_part_number == data.payload_data.espnow_ota_message.part)
+                if (led_config->ota_message_part_number == data->payload_data.ota_message.espnow_ota_message.part)
                 {
                     ++led_config->ota_message_part_number;
-                    esp_ota_write(led_config->update_handle, (const void *)data.payload_data.espnow_ota_message.data, data.payload_data.espnow_ota_message.data_len);
+                    esp_ota_write(led_config->update_handle, (const void *)data->payload_data.ota_message.espnow_ota_message.data, data->payload_data.ota_message.espnow_ota_message.data_len);
                 }
-                data.device_type = ZHDT_LED;
-                data.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_LED;
+                data->payload_type = ZHPT_UPDATE_PROGRESS;
+                zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_ERROR:
                 esp_ota_end(led_config->update_handle);
@@ -624,15 +624,15 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             case ZHPT_UPDATE_END:
                 if (esp_ota_end(led_config->update_handle) != ESP_OK)
                 {
-                    data.device_type = ZHDT_LED;
-                    data.payload_type = ZHPT_UPDATE_FAIL;
-                    zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                    data->device_type = ZHDT_LED;
+                    data->payload_type = ZHPT_UPDATE_FAIL;
+                    zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                     break;
                 }
                 esp_ota_set_boot_partition(led_config->update_partition);
-                data.device_type = ZHDT_LED;
-                data.payload_type = ZHPT_UPDATE_SUCCESS;
-                zh_send_message(led_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_LED;
+                data->payload_type = ZHPT_UPDATE_SUCCESS;
+                zh_send_message(led_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
                 esp_restart();
                 break;
