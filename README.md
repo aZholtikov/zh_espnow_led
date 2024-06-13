@@ -45,7 +45,7 @@ Run the following command to firmware build and flash module:
 
 ```text
 cd your_projects_folder
-git clone https://github.com/aZholtikov/zh_espnow_led.git
+git clone --recurse-submodules https://github.com/aZholtikov/zh_espnow_led.git
 cd zh_espnow_led
 ```
 
