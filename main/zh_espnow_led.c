@@ -536,7 +536,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                     if (led_config->gateway_is_available == true)
                     {
                         led_config->gateway_is_available = false;
-                        if (led_config->hardware_config.led_type)
+                        if (led_config->hardware_config.led_type != HALT_NONE)
                         {
                             vTaskDelete(led_config->attributes_message_task);
                             vTaskDelete(led_config->keep_alive_message_task);
@@ -655,7 +655,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
         if (send_data->status == ZH_ESPNOW_SEND_FAIL && led_config->gateway_is_available == true)
         {
             led_config->gateway_is_available = false;
-            if (led_config->hardware_config.led_type)
+            if (led_config->hardware_config.led_type != HALT_NONE)
             {
                 vTaskDelete(led_config->attributes_message_task);
                 vTaskDelete(led_config->keep_alive_message_task);
@@ -671,7 +671,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
         if (send_data->status == ZH_NETWORK_SEND_FAIL && led_config->gateway_is_available == true)
         {
             led_config->gateway_is_available = false;
-            if (led_config->hardware_config.led_type)
+            if (led_config->hardware_config.led_type != HALT_NONE)
             {
                 vTaskDelete(led_config->attributes_message_task);
                 vTaskDelete(led_config->keep_alive_message_task);

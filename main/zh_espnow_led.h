@@ -55,7 +55,7 @@ typedef struct // Structure of data exchange between tasks, functions and event 
 {
     struct // Storage structure of led hardware configuration data.
     {
-        ha_led_type_t led_type;   // Led types. @note Used in zh_espnow_led firmware only.
+        ha_led_type_t led_type;   // Led type.
         uint8_t first_white_pin;  // First white GPIO number.
         uint8_t second_white_pin; // Second white GPIO number (if present).
         uint8_t red_pin;          // Red GPIO number (if present).
