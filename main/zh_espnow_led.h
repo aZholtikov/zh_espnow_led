@@ -81,6 +81,7 @@ typedef struct // Structure of data exchange between tasks, functions and event 
         uint8_t blue;         // Blue color channel.
     } channel;
     volatile bool gateway_is_available;      // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
+    volatile bool is_first_connection;       // First connection status flag. @note Used to control the tasks when the gateway connection is established / lost.
     uint8_t gateway_mac[6];                  // Gateway MAC address.
     TaskHandle_t attributes_message_task;    // Unique task handle for zh_send_led_attributes_message_task().
     TaskHandle_t keep_alive_message_task;    // Unique task handle for zh_send_led_keep_alive_message_task().
