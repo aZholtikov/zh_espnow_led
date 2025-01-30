@@ -1,27 +1,24 @@
 # ESP-NOW led
 
-ESP-NOW based led controller/light for ESP32 ESP-IDF and ESP8266 RTOS SDK. Alternate firmware for Tuya/SmartLife/eWeLink WiFi led controllers/lights.
+ESP-NOW based led controller/light for ESP32 ESP-IDF and ESP8266 RTOS_SDK. Alternate firmware for Tuya/SmartLife/eWeLink WiFi led controllers/lights.
 
 ## Tested on
 
 1. ESP8266 RTOS_SDK v3.4
-2. ESP32 ESP-IDF v5.2
+2. ESP32 ESP-IDF v5.4
 
 ## Features
 
 1. Saves the last state when the power is turned off.
 2. Automatically adds led configuration to Home Assistan via MQTT discovery as a light.
 3. Update firmware from HTTPS server via ESP-NOW.
-4. Direct or mesh work mode.
 
 ## Notes
 
-1. Work mode must be same with [gateway](https://github.com/aZholtikov/zh_gateway) work mode.
-2. ESP-NOW mesh network based on the [zh_network](https://github.com/aZholtikov/zh_network).
-3. For initial settings use "menuconfig -> ZH ESP-NOW Led Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
-4. To restart the led, send the "restart" command to the root topic of the led (example - "homeassistant/espnow_led/24-62-AB-F9-1F-A8").
-5. To update the led firmware, send the "update" command to the root topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_led_esp32.bin" (for ESP32) or "https://your_server/zh_espnow_led_esp8266.app1.bin + https://your_server/zh_espnow_led_esp8266.app2.bin" (for ESP8266). Average update time is up to some minutes. The online status of the update will be displayed in the root led topic.
-6. To change initial settings of the led (except work mode), send the X1,X2,X3,X4,X5,X6 command to the hardware topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7/hardware"). The configuration will only be accepted if it does not cause errors. The current configuration status is displayed in the configuration topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7/config").
+1. For initial settings use "menuconfig -> ZH ESP-NOW Led Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
+2. To restart the led, send the "restart" command to the root topic of the led (example - "homeassistant/espnow_led/24-62-AB-F9-1F-A8").
+3. To update the led firmware, send the "update" command to the root topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_led_esp32.bin" (for ESP32) or "https://your_server/zh_espnow_led_esp8266.app1.bin + https://your_server/zh_espnow_led_esp8266.app2.bin" (for ESP8266). Average update time is up to one minute. The status of the update will be displayed in the root led topic.
+4. To change initial settings of the led (except work mode), send the X1,X2,X3,X4,X5,X6 command to the hardware topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7/hardware"). The configuration will only be accepted if it does not cause errors. The current configuration status is displayed in the configuration topic of the led (example - "homeassistant/espnow_led/70-03-9F-44-BE-F7/config").
 
 MQTT configuration message should filled according to the template "X1,X2,X3,X4,X5,X6". Where:
 

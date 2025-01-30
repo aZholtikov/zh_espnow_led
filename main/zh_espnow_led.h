@@ -9,17 +9,8 @@
 #include "driver/ledc.h"
 #include "esp_timer.h"
 #include "esp_ota_ops.h"
-#include "zh_config.h"
-
-#ifdef CONFIG_NETWORK_TYPE_DIRECT
 #include "zh_espnow.h"
-#define zh_send_message(a, b, c) zh_espnow_send(a, b, c)
-#define ZH_EVENT ZH_ESPNOW
-#else
-#include "zh_network.h"
-#define zh_send_message(a, b, c) zh_network_send(a, b, c)
-#define ZH_EVENT ZH_NETWORK
-#endif
+#include "zh_config.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP8266
 #define ZH_CHIP_TYPE HACHT_ESP8266
@@ -48,7 +39,7 @@
 #define ZH_LED_KEEP_ALIVE_MESSAGE_FREQUENCY 10 // Frequency of sending a led keep alive message to the gateway (in seconds).
 #define ZH_LED_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a led attributes message to the gateway (in seconds).
 
-#define ZH_MESSAGE_TASK_PRIORITY 2 // Prioritize the task of sending messages to the gateway.
+#define ZH_MESSAGE_TASK_PRIORITY 5 // Prioritize the task of sending messages to the gateway.
 #define ZH_MESSAGE_STACK_SIZE 2048 // The stack size of the task of sending messages to the gateway.
 
 typedef struct // Structure of data exchange between tasks, functions and event handlers.
@@ -81,7 +72,6 @@ typedef struct // Structure of data exchange between tasks, functions and event 
         uint8_t blue;         // Blue color channel.
     } channel;
     volatile bool gateway_is_available;      // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
-    volatile bool is_first_connection;       // First connection status flag. @note Used to control the tasks when the gateway connection is established / lost.
     uint8_t gateway_mac[6];                  // Gateway MAC address.
     TaskHandle_t attributes_message_task;    // Unique task handle for zh_send_led_attributes_message_task().
     TaskHandle_t keep_alive_message_task;    // Unique task handle for zh_send_led_keep_alive_message_task().

@@ -9,17 +9,6 @@ menu "ZH ESP-NOW Led Configuration"
 		default 18 if IDF_TARGET_ESP32C2
 		default 19 if IDF_TARGET_ESP32C3
 		default 30 if IDF_TARGET_ESP32C6
-
-	choice NETWORK_TYPE
-		prompt "Network type"
-		help
-			Network type.
-		default NETWORK_TYPE_DIRECT
-		config NETWORK_TYPE_DIRECT
-			bool "DIRECT"
-		config NETWORK_TYPE_MESH
-			bool "MESH"
-	endchoice
 	
 	choice LED_TYPE
 		prompt "Led type"
