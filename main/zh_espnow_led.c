@@ -44,7 +44,6 @@ void zh_load_config(led_config_t *led_config)
     uint8_t config_is_present = 0;
     if (nvs_get_u8(nvs_handle, "present", &config_is_present) == ESP_ERR_NVS_NOT_FOUND)
     {
-        nvs_set_u8(nvs_handle, "present", 0xFE);
         nvs_close(nvs_handle);
     SETUP_INITIAL_SETTINGS:
 #ifdef CONFIG_LED_TYPE_W
@@ -106,6 +105,7 @@ void zh_save_config(const led_config_t *led_config)
 {
     nvs_handle_t nvs_handle = 0;
     nvs_open("config", NVS_READWRITE, &nvs_handle);
+    nvs_set_u8(nvs_handle, "present", 0xFE);
     nvs_set_u8(nvs_handle, "led_type", led_config->hardware_config.led_type);
     nvs_set_u8(nvs_handle, "frs_white_pin", led_config->hardware_config.first_white_pin);
     nvs_set_u8(nvs_handle, "sec_white_pin", led_config->hardware_config.second_white_pin);
@@ -124,7 +124,6 @@ void zh_load_status(led_config_t *led_config)
     uint8_t status_is_present = 0;
     if (nvs_get_u8(nvs_handle, "present", &status_is_present) == ESP_ERR_NVS_NOT_FOUND)
     {
-        nvs_set_u8(nvs_handle, "present", 0xFE);
         nvs_close(nvs_handle);
         zh_save_status(led_config);
         return;
@@ -143,6 +142,7 @@ void zh_save_status(const led_config_t *led_config)
 {
     nvs_handle_t nvs_handle = 0;
     nvs_open("status", NVS_READWRITE, &nvs_handle);
+    nvs_set_u8(nvs_handle, "present", 0xFE);
     nvs_set_u8(nvs_handle, "led_state", led_config->status.status);
     nvs_set_u8(nvs_handle, "bright_state", led_config->status.brightness);
     nvs_set_u16(nvs_handle, "temp_state", led_config->status.temperature);
@@ -634,7 +634,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
         break;
     case ZH_ESPNOW_ON_SEND_EVENT:;
         zh_espnow_event_on_send_t *send_data = event_data;
-        if (send_data->status == ZH_ESPNOW_SEND_FAIL && led_config->gateway_is_available == true)
+        if (send_data->status == ZH_ESPNOW_SEND_FAIL)
         {
             led_config->gateway_is_available = false;
             vTaskSuspend(led_config->attributes_message_task);
