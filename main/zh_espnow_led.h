@@ -36,11 +36,16 @@
 #define get_app_description() esp_app_get_description()
 #endif
 
-#define ZH_LED_KEEP_ALIVE_MESSAGE_FREQUENCY 10 // Frequency of sending a led keep alive message to the gateway (in seconds).
-#define ZH_LED_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a led attributes message to the gateway (in seconds).
+#define ZH_LED_KEEP_ALIVE_MESSAGE_FREQUENCY 10      // Frequency of sending a led keep alive message to the gateway (in seconds).
+#define ZH_LED_ATTRIBUTES_MESSAGE_FREQUENCY 60      // Frequency of sending a led attributes message to the gateway (in seconds).
+#define ZH_LED_HARDWARE_CONFIG_MESSAGE_FREQUENCY 60 // Frequency of sending a led hardware config message to the gateway (in seconds).
+#define ZH_LED_CONFIG_MESSAGE_FREQUENCY 60          // Frequency of sending a led config message to the gateway (in seconds).
+#define ZH_LED_STATUS_MESSAGE_FREQUENCY 60          // Frequency of sending a led status message to the gateway (in seconds).
 
 #define ZH_MESSAGE_TASK_PRIORITY 5 // Prioritize the task of sending messages to the gateway.
 #define ZH_MESSAGE_STACK_SIZE 2048 // The stack size of the task of sending messages to the gateway.
+
+static bool is_first_boot = false;
 
 typedef struct // Structure of data exchange between tasks, functions and event handlers.
 {
@@ -71,10 +76,7 @@ typedef struct // Structure of data exchange between tasks, functions and event 
         uint8_t green;        // Green color channel.
         uint8_t blue;         // Blue color channel.
     } channel;
-    volatile bool gateway_is_available;      // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
     uint8_t gateway_mac[6];                  // Gateway MAC address.
-    TaskHandle_t attributes_message_task;    // Unique task handle for zh_send_led_attributes_message_task().
-    TaskHandle_t keep_alive_message_task;    // Unique task handle for zh_send_led_keep_alive_message_task().
     const esp_partition_t *update_partition; // Next update partition.
     esp_ota_handle_t update_handle;          // Unique OTA handle.
     uint16_t ota_message_part_number;        // The sequence number of the firmware upgrade part. @note Used to verify that all parts have been received.
@@ -138,23 +140,23 @@ int32_t zh_map(int32_t value, int32_t in_min, int32_t in_max, int32_t out_min, i
 /**
  * @brief Task for prepare the led attributes message and sending it to the gateway.
  *
- * @param[in,out] pvParameter Pointer to structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to structure of data exchange between tasks, functions and event handlers.
  */
 void zh_send_led_attributes_message_task(void *pvParameter);
 
 /**
- * @brief Function for prepare the led configuration message and sending it to the gateway.
+ * @brief Task for prepare the led configuration message and sending it to the gateway.
  *
- * @param[in] led_config Pointer to the structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
-void zh_send_led_config_message(const led_config_t *led_config);
+void zh_send_led_config_message_task(void *pvParameter);
 
 /**
- * @brief Function for prepare the led hardware configuration message and sending it to the gateway.
+ * @brief Task for prepare the led hardware configuration message and sending it to the gateway.
  *
- * @param[in] led_config Pointer to the structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
-void zh_send_led_hardware_config_message(const led_config_t *led_config);
+void zh_send_led_hardware_config_message_task(void *pvParameter);
 
 /**
  * @brief Task for prepare the led keep alive message and sending it to the gateway.
@@ -162,6 +164,13 @@ void zh_send_led_hardware_config_message(const led_config_t *led_config);
  * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
 void zh_send_led_keep_alive_message_task(void *pvParameter);
+
+/**
+ * @brief Task for prepare the sled status message and sending it to the gateway.
+ *
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
+ */
+void zh_send_led_status_message_task(void *pvParameter);
 
 /**
  * @brief Function for prepare the led status message and sending it to the gateway.
